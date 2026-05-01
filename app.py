@@ -308,16 +308,55 @@ with tab1:
             
             results = st.session_state['results']
             
-            # Display predictions
-            if 'predictions' in results and len(results['predictions']) > 0:
+            # Debug: Show raw response structure (optional - can be removed after testing)
+            with st.expander("🔍 Debug: View Raw API Response", expanded=False):
+                st.json(results)
+            
+            # Handle different API response formats
+            predictions = None
+            
+            # Try to extract predictions from different possible formats
+            if 'predictions' in results:
                 predictions = results['predictions']
+            elif 'predicted_classes' in results:
+                predictions = results['predicted_classes']
+            elif isinstance(results, dict):
+                # Check if results itself contains prediction data
+                if 'class' in results and 'confidence' in results:
+                    predictions = [results]  # Single prediction
+            
+            # Display predictions
+            if predictions and len(predictions) > 0:
+                # Ensure predictions is a list
+                if not isinstance(predictions, list):
+                    predictions = [predictions]
                 
-                # Sort by confidence
-                sorted_predictions = sorted(predictions, key=lambda x: x.get('confidence', 0), reverse=True)
+                # Sort by confidence with better error handling
+                try:
+                    sorted_predictions = sorted(
+                        predictions, 
+                        key=lambda x: float(x.get('confidence', 0) if isinstance(x, dict) else 0), 
+                        reverse=True
+                    )
+                except (AttributeError, TypeError, ValueError) as e:
+                    st.error(f"⚠️ Error sorting predictions: {str(e)}")
+                    sorted_predictions = predictions  # Use unsorted if sorting fails
                 
                 for idx, pred in enumerate(sorted_predictions):
-                    confidence = pred.get('confidence', 0) * 100
-                    class_name = pred.get('class', 'Unknown')
+                    # Handle different prediction formats
+                    if not isinstance(pred, dict):
+                        st.warning(f"⚠️ Unexpected prediction format at index {idx}: {type(pred)}")
+                        continue
+                    
+                    # Extract confidence and class name with fallbacks
+                    confidence_raw = pred.get('confidence', pred.get('score', 0))
+                    try:
+                        confidence = float(confidence_raw) * 100
+                    except (TypeError, ValueError):
+                        confidence = 0
+                        st.warning(f"⚠️ Invalid confidence value: {confidence_raw}")
+                    
+                    class_name = pred.get('class', pred.get('class_name', pred.get('label', 'Unknown')))
                     
                     # Apply confidence filter
                     if not show_all_predictions and confidence < confidence_threshold:
@@ -402,6 +441,17 @@ with tab1:
                         st.info("ℹ️ Detailed information not available for this condition. Please consult a healthcare professional.")
             else:
                 st.warning("⚠️ No predictions found in the response.")
+                st.info("""
+                **Possible reasons:**
+                - The model couldn't detect any skin conditions in the image
+                - The image quality is too low
+                - The API response format is unexpected
+                
+                **Try:**
+                - Upload a clearer, well-lit image
+                - Ensure the image shows a skin condition clearly
+                - Check the Debug section above to see the raw API response
+                """)
             
             # Export options
             st.markdown('<div class="section-header">Export Report</div>', unsafe_allow_html=True)
