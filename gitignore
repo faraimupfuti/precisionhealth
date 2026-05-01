@@ -1,0 +1,300 @@
+# ClaraVision Health - Git Ignore File
+
+# ===================================
+# SENSITIVE FILES - NEVER COMMIT
+# ===================================
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+secrets.json
+config/secrets.yml
+
+# API Keys and Credentials
+**/credentials.json
+**/service-account.json
+
+# ===================================
+# PYTHON
+# ===================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ===================================
+# STREAMLIT
+# ===================================
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# ===================================
+# IDE & EDITORS
+# ===================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ===================================
+# OPERATING SYSTEM
+# ===================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ===================================
+# APPLICATION SPECIFIC
+# ===================================
+# Generated reports
+*.pdf
+reports/
+exports/
+
+# Uploaded images (if you decide to save them temporarily)
+uploads/
+temp_images/
+temp/
+
+# Logs
+logs/
+*.log
+
+# Database files (for future use)
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+
+# ===================================
+# DEPLOYMENT
+# ===================================
+# Heroku
+.heroku/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# AWS
+.aws/
+*.pem
+
+# ===================================
+# DATA & MODELS
+# ===================================
+# Large dataset files
+data/
+datasets/
+*.csv
+*.xlsx
+*.json
+!disease_database.py  # Explicitly include this
+
+# ML models (if you download them locally)
+models/
+*.h5
+*.pkl
+*.pt
+*.pth
+*.onnx
+
+# ===================================
+# MISC
+# ===================================
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Notes and drafts
+NOTES.md
+TODO.md
+DRAFT*.md
+
+# Cache
+.cache/
+cache/
+
+# ===================================
+# TESTING
+# ===================================
+# Test outputs
+test_outputs/
+test_reports/
+
+# Coverage reports
+htmlcov/
+.coverage
+
+# ===================================
+# PRODUCTION
+# ===================================
+# Production configuration
+production.env
+prod.env
