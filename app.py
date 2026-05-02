@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 from PIL import Image
 import io
-from disease_database import DISEASE_DATABASE
+from disease_database import DISEASE_DATABASE, get_disease_info
 from utils import generate_pdf_report, send_email_report
 
 # Page configuration
@@ -219,17 +219,17 @@ with st.sidebar:
     st.markdown("### 📋 Analysis Settings")
     
     confidence_threshold = st.slider(
-        "Confidence Threshold (%)",
+        "Minimum Confidence (%)",
         min_value=0,
         max_value=100,
-        value=30,
-        help="Minimum confidence level to display predictions"
+        value=20,
+        help="Filter out predictions below this confidence level"
     )
     
     show_all_predictions = st.checkbox(
-        "Show All Predictions",
+        "Show More Than Top 3",
         value=False,
-        help="Display all predictions regardless of confidence"
+        help="By default, only the top 3 predictions are shown. Enable to see all predictions above the confidence threshold."
     )
     
     st.markdown("---")
@@ -342,7 +342,16 @@ with tab1:
                     st.error(f"⚠️ Error sorting predictions: {str(e)}")
                     sorted_predictions = predictions  # Use unsorted if sorting fails
                 
-                for idx, pred in enumerate(sorted_predictions):
+                # Limit to top 3 predictions unless show_all is enabled
+                if not show_all_predictions:
+                    display_predictions = sorted_predictions[:3]
+                else:
+                    display_predictions = sorted_predictions
+                
+                # Show summary
+                st.info(f"📊 Showing top {len(display_predictions)} prediction(s) from {len(sorted_predictions)} total")
+                
+                for idx, pred in enumerate(display_predictions):
                     # Handle different prediction formats
                     if not isinstance(pred, dict):
                         st.warning(f"⚠️ Unexpected prediction format at index {idx}: {type(pred)}")
@@ -359,8 +368,14 @@ with tab1:
                     class_name = pred.get('class', pred.get('class_name', pred.get('label', 'Unknown')))
                     
                     # Apply confidence filter
-                    if not show_all_predictions and confidence < confidence_threshold:
+                    if confidence < confidence_threshold:
                         continue
+                    
+                    # Get disease information using helper function
+                    disease_info = get_disease_info(class_name)
+                    
+                    # Use display name if available
+                    display_name = disease_info.get('display_name', class_name) if disease_info else class_name
                     
                     # Determine confidence level
                     if confidence >= 70:
@@ -375,7 +390,7 @@ with tab1:
                     
                     st.markdown(f"""
                     <div class="disease-card">
-                        <div class="disease-title">{class_name}</div>
+                        <div class="disease-title">{display_name}</div>
                         <span class="confidence-badge {conf_class}">
                             {conf_label}: {confidence:.1f}%
                         </span>
@@ -383,9 +398,7 @@ with tab1:
                     """, unsafe_allow_html=True)
                     
                     # Display disease information if available
-                    if class_name in DISEASE_DATABASE:
-                        disease_info = DISEASE_DATABASE[class_name]
-                        
+                    if disease_info:
                         with st.expander("📖 View Detailed Information", expanded=(idx == 0)):
                             # Description
                             st.markdown(f"""
@@ -509,15 +522,19 @@ with tab1:
 with tab2:
     st.markdown('<div class="section-header">Disease Information Database</div>', unsafe_allow_html=True)
     
-    disease_names = list(DISEASE_DATABASE.keys())
-    selected_disease = st.selectbox("Select a condition to learn more:", disease_names)
+    # Create list of display names
+    disease_options = {disease_info.get('display_name', key): key for key, disease_info in DISEASE_DATABASE.items()}
+    display_names = sorted(disease_options.keys())
     
-    if selected_disease:
+    selected_display_name = st.selectbox("Select a condition to learn more:", display_names)
+    
+    if selected_display_name:
+        selected_disease = disease_options[selected_display_name]
         disease_info = DISEASE_DATABASE[selected_disease]
         
         st.markdown(f"""
         <div class="disease-card">
-            <div class="disease-title">{selected_disease}</div>
+            <div class="disease-title">{disease_info.get('display_name', selected_disease)}</div>
         </div>
         """, unsafe_allow_html=True)
         
