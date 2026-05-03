@@ -56,7 +56,6 @@ st.markdown("""
         max-width: 1400px;
     }
     
-    /* Header */
     .header-card {
         background: rgba(255, 255, 255, 0.98);
         backdrop-filter: blur(10px);
@@ -83,7 +82,6 @@ st.markdown("""
         margin-top: 0.5rem;
     }
     
-    /* Cards */
     .content-card {
         background: white;
         border-radius: 20px;
@@ -99,7 +97,6 @@ st.markdown("""
         margin-bottom: 1.5rem;
     }
     
-    /* Top Prediction Card */
     .prediction-card {
         background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
         border-radius: 20px;
@@ -145,7 +142,6 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
     }
     
-    /* Info Blocks */
     .info-block {
         background: #f8fafc;
         border-radius: 12px;
@@ -189,7 +185,6 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Alert Box */
     .alert-box {
         background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
         border: 2px solid #f87171;
@@ -205,7 +200,6 @@ st.markdown("""
         margin-bottom: 0.5rem;
     }
     
-    /* Disclaimer */
     .disclaimer {
         background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
         border: 2px solid #fbbf24;
@@ -227,7 +221,6 @@ st.markdown("""
         font-size: 0.95rem;
     }
     
-    /* Buttons */
     .stButton>button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -245,7 +238,6 @@ st.markdown("""
         box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
     }
     
-    /* Hide Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display: none;}
@@ -282,6 +274,8 @@ with st.sidebar:
         value=20,
         help="Filter predictions below this threshold"
     )
+    
+    show_debug = st.checkbox("Show Debug Info", value=False, help="Show raw API response for troubleshooting")
     
     st.markdown("---")
     st.markdown("### 📄 Report Options")
@@ -358,14 +352,29 @@ with col2:
         
         results = st.session_state['results']
         
-        # Extract predictions
+        # Debug mode
+        if show_debug:
+            with st.expander("🔍 Debug: Raw API Response", expanded=True):
+                st.json(results)
+        
+        # Extract predictions - handle all possible formats
         predictions = None
-        if 'predictions' in results:
+        
+        # Format 1: Standard Roboflow classification
+        if 'predictions' in results and isinstance(results['predictions'], list):
             predictions = results['predictions']
+        # Format 2: Single top prediction
+        elif 'top' in results:
+            predictions = [{
+                'class': results.get('top'),
+                'confidence': results.get('confidence', 0)
+            }]
+        # Format 3: predicted_classes key
         elif 'predicted_classes' in results:
             predictions = results['predicted_classes']
-        elif isinstance(results, dict) and 'class' in results:
-            predictions = [results]
+        # Format 4: Direct class/confidence in results
+        elif 'class' in results and 'confidence' in results:
+            predictions = [{'class': results['class'], 'confidence': results['confidence']}]
         
         if predictions and len(predictions) > 0:
             if not isinstance(predictions, list):
@@ -375,7 +384,7 @@ with col2:
             try:
                 sorted_predictions = sorted(
                     predictions,
-                    key=lambda x: float(x.get('confidence', 0) if isinstance(x, dict) else 0),
+                    key=lambda x: float(x.get('confidence', x.get('score', 0)) if isinstance(x, dict) else 0),
                     reverse=True
                 )
             except:
@@ -385,14 +394,27 @@ with col2:
             top_pred = sorted_predictions[0] if len(sorted_predictions) > 0 else None
             
             if top_pred and isinstance(top_pred, dict):
-                # Extract info
-                confidence_raw = top_pred.get('confidence', top_pred.get('score', 0))
+                # Extract class name - try all possible keys
+                class_name = (
+                    top_pred.get('class') or 
+                    top_pred.get('class_name') or 
+                    top_pred.get('label') or 
+                    top_pred.get('top') or 
+                    'Unknown'
+                )
+                
+                # Extract confidence - try all possible keys
+                confidence_raw = (
+                    top_pred.get('confidence') or 
+                    top_pred.get('score') or 
+                    top_pred.get('probability') or 
+                    0
+                )
+                
                 try:
                     confidence = float(confidence_raw) * 100
                 except:
                     confidence = 0
-                
-                class_name = top_pred.get('class', top_pred.get('class_name', top_pred.get('label', 'Unknown')))
                 
                 # Get disease info
                 disease_info = get_disease_info(class_name)
@@ -418,6 +440,10 @@ with col2:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                # Show warning if disease info not found
+                if not disease_info:
+                    st.warning(f"⚠️ No information found for '{class_name}'. Enable 'Show Debug Info' to see the raw API response.")
                 
                 # Display disease information immediately
                 if disease_info:
@@ -467,8 +493,6 @@ with col2:
                             <ul class="info-list">{seek_care_html}</ul>
                         </div>
                         """, unsafe_allow_html=True)
-                else:
-                    st.info("ℹ️ Detailed information not available for this condition.")
                 
                 # Export options
                 st.markdown("---")
@@ -499,6 +523,8 @@ with col2:
                                     )
                             except Exception as e:
                                 st.error(f"PDF Error: {str(e)}")
+                                if show_debug:
+                                    st.exception(e)
                 
                 with col_email:
                     email = st.text_input("Email address", placeholder="doctor@hospital.com", label_visibility="collapsed")
@@ -524,9 +550,9 @@ with col2:
                         else:
                             st.warning("⚠️ Enter email address")
             else:
-                st.warning("⚠️ Invalid prediction format")
+                st.warning("⚠️ Invalid prediction format. Enable 'Show Debug Info' to see the raw response.")
         else:
-            st.info("ℹ️ No predictions found. Try a clearer image or lower the confidence threshold.")
+            st.info("ℹ️ No predictions found. Try a clearer image, lower the confidence threshold, or enable 'Show Debug Info'.")
         
         st.markdown('</div>', unsafe_allow_html=True)
     else:
