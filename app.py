@@ -10,525 +10,477 @@ from disease_database import DISEASE_DATABASE
 try:
     from disease_database import get_disease_info
 except ImportError:
-    # Fallback if helper function doesn't exist
     def get_disease_info(class_name):
-        """Fallback disease matching function"""
         if class_name in DISEASE_DATABASE:
             return DISEASE_DATABASE[class_name]
-        
         class_lower = class_name.lower()
         if class_lower in DISEASE_DATABASE:
             return DISEASE_DATABASE[class_lower]
-        
         class_underscore = class_name.replace(' ', '_')
         if class_underscore in DISEASE_DATABASE:
             return DISEASE_DATABASE[class_underscore]
-        
         class_no_underscore = class_name.replace('_', ' ')
         if class_no_underscore in DISEASE_DATABASE:
             return DISEASE_DATABASE[class_no_underscore]
-        
         class_title = class_name.title()
         if class_title in DISEASE_DATABASE:
             return DISEASE_DATABASE[class_title]
-        
         return None
+
 from utils import generate_pdf_report, send_email_report
 
 # Page configuration
 st.set_page_config(
-    page_title="ClaraVision Health - Skin Condition Analysis",
+    page_title="ClaraVision Health - AI Skin Analysis",
     page_icon="🔬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for professional medical interface
+# Modern, beautiful CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
-    /* Global styles */
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
     .main {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 0;
     }
     
-    /* Header styling */
-    .header-container {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        padding: 2rem;
-        border-radius: 12px;
+    .block-container {
+        padding: 2rem 3rem;
+        max-width: 1400px;
+    }
+    
+    /* Header */
+    .header-card {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        padding: 2.5rem;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     }
     
-    .header-title {
-        font-family: 'Crimson Pro', serif;
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: white;
+    .app-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         margin: 0;
-        text-align: center;
+        letter-spacing: -0.02em;
     }
     
-    .header-subtitle {
-        font-family: 'IBM Plex Sans', sans-serif;
+    .app-subtitle {
         font-size: 1.1rem;
-        color: #e0e7ff;
-        text-align: center;
+        color: #64748b;
+        font-weight: 400;
         margin-top: 0.5rem;
     }
     
-    /* Card styling */
-    .info-card {
+    /* Cards */
+    .content-card {
         background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        border-left: 4px solid #3b82f6;
-    }
-    
-    .disease-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        border-radius: 12px;
+        border-radius: 20px;
         padding: 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        border: 2px solid #e2e8f0;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        margin-bottom: 1.5rem;
     }
     
-    .disease-title {
-        font-family: 'Crimson Pro', serif;
-        font-size: 1.8rem;
+    .card-title {
+        font-size: 1.3rem;
         font-weight: 700;
         color: #1e293b;
-        margin-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Top Prediction Card */
+    .prediction-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 20px;
+        padding: 2.5rem;
+        border-left: 6px solid #667eea;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.12);
+        margin-bottom: 2rem;
+    }
+    
+    .disease-name {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
     }
     
     .confidence-badge {
-        display: inline-block;
-        padding: 0.4rem 1rem;
-        border-radius: 20px;
-        font-family: 'IBM Plex Sans', sans-serif;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.4rem;
+        border-radius: 100px;
         font-weight: 600;
-        font-size: 0.9rem;
-        margin: 0.5rem 0;
+        font-size: 0.95rem;
     }
     
-    .high-confidence {
-        background: #dcfce7;
-        color: #166534;
+    .confidence-high {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
     
-    .medium-confidence {
-        background: #fef3c7;
-        color: #92400e;
+    .confidence-medium {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
     }
     
-    .low-confidence {
-        background: #fee2e2;
-        color: #991b1b;
+    .confidence-low {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
     }
     
-    /* Section headers */
-    .section-header {
-        font-family: 'Crimson Pro', serif;
-        font-size: 1.4rem;
-        font-weight: 600;
-        color: #1e3a8a;
-        margin: 1.5rem 0 1rem 0;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #3b82f6;
+    /* Info Blocks */
+    .info-block {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #667eea;
     }
     
-    /* Warning/Disclaimer box */
-    .disclaimer-box {
-        background: #fef3c7;
-        border: 2px solid #f59e0b;
-        border-radius: 8px;
+    .info-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1rem;
+    }
+    
+    .info-text {
+        font-size: 1rem;
+        line-height: 1.8;
+        color: #475569;
+    }
+    
+    .info-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .info-list li {
+        padding: 0.6rem 0;
+        padding-left: 1.5rem;
+        position: relative;
+        line-height: 1.6;
+        color: #475569;
+    }
+    
+    .info-list li:before {
+        content: "●";
+        position: absolute;
+        left: 0;
+        color: #667eea;
+        font-weight: bold;
+    }
+    
+    /* Alert Box */
+    .alert-box {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border: 2px solid #f87171;
+        border-radius: 12px;
         padding: 1.5rem;
         margin: 1.5rem 0;
     }
     
-    .disclaimer-title {
-        font-family: 'IBM Plex Sans', sans-serif;
+    .alert-title {
         font-size: 1.1rem;
-        font-weight: 600;
+        font-weight: 700;
+        color: #991b1b;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Disclaimer */
+    .disclaimer {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #fbbf24;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .disclaimer-title {
+        font-weight: 700;
         color: #92400e;
+        font-size: 1.1rem;
         margin-bottom: 0.5rem;
     }
     
     .disclaimer-text {
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-size: 0.95rem;
         color: #78350f;
-        line-height: 1.6;
-    }
-    
-    /* Button styling */
-    .stButton>button {
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-weight: 500;
-        border-radius: 8px;
-        padding: 0.6rem 1.5rem;
-        transition: all 0.3s ease;
-    }
-    
-    /* Info sections */
-    .info-section {
-        background: #f8fafc;
-        border-radius: 8px;
-        padding: 1.2rem;
-        margin: 1rem 0;
-        border-left: 3px solid #3b82f6;
-    }
-    
-    .info-section-title {
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 0.8rem;
-    }
-    
-    .info-section-text {
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-size: 0.95rem;
-        color: #475569;
         line-height: 1.7;
-    }
-    
-    /* List styling */
-    .custom-list {
-        font-family: 'IBM Plex Sans', sans-serif;
         font-size: 0.95rem;
-        color: #475569;
-        line-height: 1.8;
-        padding-left: 1.2rem;
     }
     
-    /* Footer */
-    .footer {
-        text-align: center;
-        padding: 2rem;
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-size: 0.9rem;
-        color: #64748b;
-        margin-top: 3rem;
+    /* Buttons */
+    .stButton>button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.8rem 2rem;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
+    
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Hide Streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
 # Header
 st.markdown("""
-<div class="header-container">
-    <h1 class="header-title">🔬 ClaraVision Health</h1>
-    <p class="header-subtitle">AI-Powered Skin Condition Analysis for African Healthcare</p>
+<div class="header-card">
+    <h1 class="app-title">🔬 ClaraVision Health</h1>
+    <p class="app-subtitle">AI-Powered Skin Analysis for African Healthcare</p>
 </div>
 """, unsafe_allow_html=True)
 
 # Disclaimer
 st.markdown("""
-<div class="disclaimer-box">
+<div class="disclaimer">
     <div class="disclaimer-title">⚕️ Medical Disclaimer</div>
     <div class="disclaimer-text">
-        This is a demonstration tool designed to assist healthcare professionals and is NOT a substitute for professional medical diagnosis. 
-        This system is optimized for African skin tones and SADC region skin conditions. Always consult with qualified healthcare 
-        providers for proper diagnosis and treatment. This tool is intended for educational and screening purposes only.
+        This AI tool assists healthcare professionals and is NOT a substitute for professional medical diagnosis. 
+        Optimized for African skin tones and SADC region conditions. Always consult qualified healthcare providers.
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
-    st.markdown("### 📋 Analysis Settings")
+    st.markdown("### ⚙️ Analysis Settings")
     
-    confidence_threshold = st.slider(
+    min_confidence = st.slider(
         "Minimum Confidence (%)",
         min_value=0,
         max_value=100,
         value=20,
-        help="Filter out predictions below this confidence level"
-    )
-    
-    show_all_predictions = st.checkbox(
-        "Show More Than Top 3",
-        value=False,
-        help="By default, only the top 3 predictions are shown. Enable to see all predictions above the confidence threshold."
+        help="Filter predictions below this threshold"
     )
     
     st.markdown("---")
-    st.markdown("### 📊 Report Options")
+    st.markdown("### 📄 Report Options")
     
-    include_treatment = st.checkbox("Include Treatment Recommendations", value=True)
-    include_prevention = st.checkbox("Include Prevention Tips", value=True)
-    include_when_to_seek_care = st.checkbox("Include When to Seek Care", value=True)
+    include_treatment = st.checkbox("Treatment Recommendations", value=True)
+    include_prevention = st.checkbox("Prevention Tips", value=True)
+    include_when_to_seek_care = st.checkbox("When to Seek Care", value=True)
     
     st.markdown("---")
-    st.markdown("### 🌍 About ClaraVision")
+    st.markdown("### ℹ️ About")
     st.info("""
-    **ClaraVision Health** leverages advanced AI to provide skin condition analysis 
-    optimized for African skin tones and common conditions in the SADC region.
+    **ClaraVision Health**  
+    Version 1.0  
     
-    **Version:** 1.0 (Demo)
+    **Optimized for:**
+    - African skin tones
+    - SADC region  
+    - Primary care
     
-    **Target Markets:** SADC Region
-    
-    **Regulatory Status:** Demo/POC
+    **Status:** Demo/POC
     """)
 
-# Main content
-tab1, tab2, tab3 = st.tabs(["📸 Analysis", "📚 Disease Information", "ℹ️ About"])
+# Main Content
+col1, col2 = st.columns([1, 1.2])
 
-with tab1:
-    col1, col2 = st.columns([1, 1])
+with col1:
+    st.markdown('<div class="content-card"><div class="card-title">📸 Upload Image</div>', unsafe_allow_html=True)
     
-    with col1:
-        st.markdown('<div class="section-header">Upload Image</div>', unsafe_allow_html=True)
-        
-        uploaded_file = st.file_uploader(
-            "Choose a skin condition image",
-            type=['jpg', 'jpeg', 'png'],
-            help="Upload a clear image of the affected area"
-        )
-        
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Image", use_container_width=True)
-            
-            # Analysis button
-            if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
-                with st.spinner("Analyzing image..."):
-                    try:
-                        # Convert image to base64
-                        buffered = io.BytesIO()
-                        image.save(buffered, format="JPEG")
-                        img_base64 = base64.b64encode(buffered.getvalue()).decode()
-                        
-                        # Make API request to Roboflow
-                        api_url = "https://serverless.roboflow.com/precisionhealth-skin-condition-classification/9"
-                        api_key = "cmnlsaDgw7FTB0sVFZx2"
-                        
-                        response = requests.post(
-                            f"{api_url}?api_key={api_key}",
-                            data=img_base64,
-                            headers={"Content-Type": "application/x-www-form-urlencoded"}
-                        )
-                        
-                        if response.status_code == 200:
-                            results = response.json()
-                            st.session_state['results'] = results
-                            st.session_state['image'] = image
-                            st.session_state['timestamp'] = datetime.now()
-                            st.success("✅ Analysis complete!")
-                        else:
-                            st.error(f"❌ Error: {response.status_code} - {response.text}")
-                            
-                    except Exception as e:
-                        st.error(f"❌ Error during analysis: {str(e)}")
+    uploaded_file = st.file_uploader(
+        "Choose a clear image",
+        type=['jpg', 'jpeg', 'png'],
+        help="For best results, use well-lit, focused images",
+        label_visibility="collapsed"
+    )
     
-    with col2:
-        if 'results' in st.session_state:
-            st.markdown('<div class="section-header">Analysis Results</div>', unsafe_allow_html=True)
-            
-            results = st.session_state['results']
-            
-            # Debug: Show raw response structure (optional - can be removed after testing)
-            with st.expander("🔍 Debug: View Raw API Response", expanded=False):
-                st.json(results)
-            
-            # Handle different API response formats
-            predictions = None
-            
-            # Try to extract predictions from different possible formats
-            if 'predictions' in results:
-                predictions = results['predictions']
-            elif 'predicted_classes' in results:
-                predictions = results['predicted_classes']
-            elif isinstance(results, dict):
-                # Check if results itself contains prediction data
-                if 'class' in results and 'confidence' in results:
-                    predictions = [results]  # Single prediction
-            
-            # Display predictions
-            if predictions and len(predictions) > 0:
-                # Ensure predictions is a list
-                if not isinstance(predictions, list):
-                    predictions = [predictions]
-                
-                # Sort by confidence with better error handling
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, use_container_width=True)
+        
+        if st.button("🔍 Analyze Image", use_container_width=True, type="primary"):
+            with st.spinner("Analyzing..."):
                 try:
-                    sorted_predictions = sorted(
-                        predictions, 
-                        key=lambda x: float(x.get('confidence', 0) if isinstance(x, dict) else 0), 
-                        reverse=True
+                    buffered = io.BytesIO()
+                    image.save(buffered, format="JPEG")
+                    img_base64 = base64.b64encode(buffered.getvalue()).decode()
+                    
+                    api_url = "https://serverless.roboflow.com/precisionhealth-skin-condition-classification/9"
+                    api_key = "cmnlsaDgw7FTB0sVFZx2"
+                    
+                    response = requests.post(
+                        f"{api_url}?api_key={api_key}",
+                        data=img_base64,
+                        headers={"Content-Type": "application/x-www-form-urlencoded"}
                     )
-                except (AttributeError, TypeError, ValueError) as e:
-                    st.error(f"⚠️ Error sorting predictions: {str(e)}")
-                    sorted_predictions = predictions  # Use unsorted if sorting fails
-                
-                # Limit to top 3 predictions unless show_all is enabled
-                if not show_all_predictions:
-                    display_predictions = sorted_predictions[:3]
-                else:
-                    display_predictions = sorted_predictions
-                
-                # Show summary
-                st.info(f"📊 Showing top {len(display_predictions)} prediction(s) from {len(sorted_predictions)} total")
-                
-                for idx, pred in enumerate(display_predictions):
-                    # Handle different prediction formats
-                    if not isinstance(pred, dict):
-                        st.warning(f"⚠️ Unexpected prediction format at index {idx}: {type(pred)}")
-                        continue
                     
-                    # Extract confidence and class name with fallbacks
-                    confidence_raw = pred.get('confidence', pred.get('score', 0))
-                    try:
-                        confidence = float(confidence_raw) * 100
-                    except (TypeError, ValueError):
-                        confidence = 0
-                        st.warning(f"⚠️ Invalid confidence value: {confidence_raw}")
-                    
-                    class_name = pred.get('class', pred.get('class_name', pred.get('label', 'Unknown')))
-                    
-                    # Apply confidence filter
-                    if confidence < confidence_threshold:
-                        continue
-                    
-                    # Get disease information using helper function
-                    disease_info = get_disease_info(class_name)
-                    
-                    # Use display name if available
-                    display_name = disease_info.get('display_name', class_name) if disease_info else class_name
-                    
-                    # Determine confidence level
-                    if confidence >= 70:
-                        conf_class = "high-confidence"
-                        conf_label = "High Confidence"
-                    elif confidence >= 40:
-                        conf_class = "medium-confidence"
-                        conf_label = "Medium Confidence"
+                    if response.status_code == 200:
+                        results = response.json()
+                        st.session_state['results'] = results
+                        st.session_state['image'] = image
+                        st.session_state['timestamp'] = datetime.now()
+                        st.success("✅ Analysis complete!")
+                        st.rerun()
                     else:
-                        conf_class = "low-confidence"
-                        conf_label = "Low Confidence"
-                    
+                        st.error(f"❌ API Error: {response.status_code}")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with col2:
+    if 'results' in st.session_state:
+        st.markdown('<div class="content-card"><div class="card-title">📊 Analysis Results</div>', unsafe_allow_html=True)
+        
+        results = st.session_state['results']
+        
+        # Extract predictions
+        predictions = None
+        if 'predictions' in results:
+            predictions = results['predictions']
+        elif 'predicted_classes' in results:
+            predictions = results['predicted_classes']
+        elif isinstance(results, dict) and 'class' in results:
+            predictions = [results]
+        
+        if predictions and len(predictions) > 0:
+            if not isinstance(predictions, list):
+                predictions = [predictions]
+            
+            # Sort by confidence
+            try:
+                sorted_predictions = sorted(
+                    predictions,
+                    key=lambda x: float(x.get('confidence', 0) if isinstance(x, dict) else 0),
+                    reverse=True
+                )
+            except:
+                sorted_predictions = predictions
+            
+            # Get TOP prediction only
+            top_pred = sorted_predictions[0] if len(sorted_predictions) > 0 else None
+            
+            if top_pred and isinstance(top_pred, dict):
+                # Extract info
+                confidence_raw = top_pred.get('confidence', top_pred.get('score', 0))
+                try:
+                    confidence = float(confidence_raw) * 100
+                except:
+                    confidence = 0
+                
+                class_name = top_pred.get('class', top_pred.get('class_name', top_pred.get('label', 'Unknown')))
+                
+                # Get disease info
+                disease_info = get_disease_info(class_name)
+                display_name = disease_info.get('display_name', class_name) if disease_info else class_name
+                
+                # Confidence badge
+                if confidence >= 70:
+                    conf_class = "confidence-high"
+                    conf_label = "High Confidence"
+                elif confidence >= 40:
+                    conf_class = "confidence-medium"
+                    conf_label = "Medium Confidence"
+                else:
+                    conf_class = "confidence-low"
+                    conf_label = "Low Confidence"
+                
+                # Display top prediction
+                st.markdown(f"""
+                <div class="prediction-card">
+                    <div class="disease-name">{display_name}</div>
+                    <div class="{conf_class} confidence-badge">
+                        {conf_label}: {confidence:.1f}%
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Display disease information immediately
+                if disease_info:
+                    # Description
                     st.markdown(f"""
-                    <div class="disease-card">
-                        <div class="disease-title">{display_name}</div>
-                        <span class="confidence-badge {conf_class}">
-                            {conf_label}: {confidence:.1f}%
-                        </span>
+                    <div class="info-block">
+                        <div class="info-title">📖 Description</div>
+                        <div class="info-text">{disease_info['description']}</div>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Display disease information if available
-                    if disease_info:
-                        with st.expander("📖 View Detailed Information", expanded=(idx == 0)):
-                            # Description
-                            st.markdown(f"""
-                            <div class="info-section">
-                                <div class="info-section-title">Description</div>
-                                <div class="info-section-text">{disease_info['description']}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Symptoms
-                            st.markdown(f"""
-                            <div class="info-section">
-                                <div class="info-section-title">Common Symptoms</div>
-                                <div class="custom-list">
-                                    {''.join([f'• {symptom}<br>' for symptom in disease_info['symptoms']])}
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Treatment recommendations
-                            if include_treatment:
-                                st.markdown(f"""
-                                <div class="info-section">
-                                    <div class="info-section-title">Treatment Recommendations</div>
-                                    <div class="custom-list">
-                                        {''.join([f'• {treatment}<br>' for treatment in disease_info['treatment']])}
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            # Prevention
-                            if include_prevention and 'prevention' in disease_info:
-                                st.markdown(f"""
-                                <div class="info-section">
-                                    <div class="info-section-title">Prevention Tips</div>
-                                    <div class="custom-list">
-                                        {''.join([f'• {tip}<br>' for tip in disease_info['prevention']])}
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            # When to seek care
-                            if include_when_to_seek_care and 'when_to_seek_care' in disease_info:
-                                st.markdown(f"""
-                                <div class="info-section" style="border-left-color: #ef4444;">
-                                    <div class="info-section-title" style="color: #dc2626;">⚠️ When to Seek Medical Care</div>
-                                    <div class="custom-list">
-                                        {''.join([f'• {item}<br>' for item in disease_info['when_to_seek_care']])}
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                    else:
-                        st.info("ℹ️ Detailed information not available for this condition. Please consult a healthcare professional.")
-            else:
-                st.warning("⚠️ No predictions found in the response.")
-                st.info("""
-                **Possible reasons:**
-                - The model couldn't detect any skin conditions in the image
-                - The image quality is too low
-                - The API response format is unexpected
+                    # Symptoms
+                    symptoms_html = ''.join([f'<li>{s}</li>' for s in disease_info['symptoms']])
+                    st.markdown(f"""
+                    <div class="info-block">
+                        <div class="info-title">🔍 Symptoms</div>
+                        <ul class="info-list">{symptoms_html}</ul>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Treatment
+                    if include_treatment:
+                        treatment_html = ''.join([f'<li>{t}</li>' for t in disease_info['treatment']])
+                        st.markdown(f"""
+                        <div class="info-block">
+                            <div class="info-title">💊 Treatment Plan</div>
+                            <ul class="info-list">{treatment_html}</ul>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Prevention
+                    if include_prevention and 'prevention' in disease_info:
+                        prevention_html = ''.join([f'<li>{p}</li>' for p in disease_info['prevention']])
+                        st.markdown(f"""
+                        <div class="info-block">
+                            <div class="info-title">🛡️ Prevention</div>
+                            <ul class="info-list">{prevention_html}</ul>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # When to seek care
+                    if include_when_to_seek_care and 'when_to_seek_care' in disease_info:
+                        seek_care_html = ''.join([f'<li>{w}</li>' for w in disease_info['when_to_seek_care']])
+                        st.markdown(f"""
+                        <div class="alert-box">
+                            <div class="alert-title">⚠️ When to Seek Medical Care</div>
+                            <ul class="info-list">{seek_care_html}</ul>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("ℹ️ Detailed information not available for this condition.")
                 
-                **Try:**
-                - Upload a clearer, well-lit image
-                - Ensure the image shows a skin condition clearly
-                - Check the Debug section above to see the raw API response
-                """)
-            
-            # Export options
-            st.markdown('<div class="section-header">Export Report</div>', unsafe_allow_html=True)
-            
-            col_pdf, col_email = st.columns(2)
-            
-            with col_pdf:
-                if st.button("📄 Generate PDF Report", use_container_width=True):
-                    with st.spinner("Generating PDF..."):
-                        try:
-                            pdf_path = generate_pdf_report(
-                                st.session_state['results'],
-                                st.session_state['image'],
-                                st.session_state['timestamp'],
-                                include_treatment,
-                                include_prevention,
-                                include_when_to_seek_care
-                            )
-                            
-                            with open(pdf_path, "rb") as pdf_file:
-                                st.download_button(
-                                    label="⬇️ Download PDF Report",
-                                    data=pdf_file,
-                                    file_name=f"claravision_report_{st.session_state['timestamp'].strftime('%Y%m%d_%H%M%S')}.pdf",
-                                    mime="application/pdf",
-                                    use_container_width=True
-                                )
-                        except Exception as e:
-                            st.error(f"❌ Error generating PDF: {str(e)}")
-            
-            with col_email:
-                email_address = st.text_input("Email address", placeholder="doctor@hospital.com")
-                if st.button("📧 Email Report", use_container_width=True):
-                    if email_address:
-                        with st.spinner("Sending email..."):
+                # Export options
+                st.markdown("---")
+                st.markdown("### 📤 Export Report")
+                
+                col_pdf, col_email = st.columns(2)
+                
+                with col_pdf:
+                    if st.button("📄 Download PDF", use_container_width=True):
+                        with st.spinner("Generating PDF..."):
                             try:
-                                success = send_email_report(
-                                    email_address,
+                                pdf_path = generate_pdf_report(
                                     st.session_state['results'],
                                     st.session_state['image'],
                                     st.session_state['timestamp'],
@@ -536,153 +488,60 @@ with tab1:
                                     include_prevention,
                                     include_when_to_seek_care
                                 )
-                                if success:
-                                    st.success(f"✅ Report sent to {email_address}")
-                                else:
-                                    st.error("❌ Email configuration required. Please set up SMTP settings in environment variables.")
+                                
+                                with open(pdf_path, "rb") as pdf_file:
+                                    st.download_button(
+                                        label="⬇️ Download Report",
+                                        data=pdf_file,
+                                        file_name=f"claravision_report_{st.session_state['timestamp'].strftime('%Y%m%d_%H%M%S')}.pdf",
+                                        mime="application/pdf",
+                                        use_container_width=True
+                                    )
                             except Exception as e:
-                                st.error(f"❌ Error sending email: {str(e)}")
-                    else:
-                        st.warning("⚠️ Please enter an email address.")
-
-with tab2:
-    st.markdown('<div class="section-header">Disease Information Database</div>', unsafe_allow_html=True)
-    
-    # Create list of display names
-    disease_options = {disease_info.get('display_name', key): key for key, disease_info in DISEASE_DATABASE.items()}
-    display_names = sorted(disease_options.keys())
-    
-    selected_display_name = st.selectbox("Select a condition to learn more:", display_names)
-    
-    if selected_display_name:
-        selected_disease = disease_options[selected_display_name]
-        disease_info = DISEASE_DATABASE[selected_disease]
+                                st.error(f"PDF Error: {str(e)}")
+                
+                with col_email:
+                    email = st.text_input("Email address", placeholder="doctor@hospital.com", label_visibility="collapsed")
+                    if st.button("📧 Email Report", use_container_width=True):
+                        if email:
+                            with st.spinner("Sending..."):
+                                try:
+                                    success = send_email_report(
+                                        email,
+                                        st.session_state['results'],
+                                        st.session_state['image'],
+                                        st.session_state['timestamp'],
+                                        include_treatment,
+                                        include_prevention,
+                                        include_when_to_seek_care
+                                    )
+                                    if success:
+                                        st.success(f"✅ Sent to {email}")
+                                    else:
+                                        st.warning("⚠️ Email not configured")
+                                except Exception as e:
+                                    st.error(f"Email Error: {str(e)}")
+                        else:
+                            st.warning("⚠️ Enter email address")
+            else:
+                st.warning("⚠️ Invalid prediction format")
+        else:
+            st.info("ℹ️ No predictions found. Try a clearer image or lower the confidence threshold.")
         
-        st.markdown(f"""
-        <div class="disease-card">
-            <div class="disease-title">{disease_info.get('display_name', selected_disease)}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div class="info-section">
-            <div class="info-section-title">Description</div>
-            <div class="info-section-text">{disease_info['description']}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown(f"""
-            <div class="info-section">
-                <div class="info-section-title">Common Symptoms</div>
-                <div class="custom-list">
-                    {''.join([f'• {symptom}<br>' for symptom in disease_info['symptoms']])}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if 'prevention' in disease_info:
-                st.markdown(f"""
-                <div class="info-section">
-                    <div class="info-section-title">Prevention Tips</div>
-                    <div class="custom-list">
-                        {''.join([f'• {tip}<br>' for tip in disease_info['prevention']])}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div class="info-section">
-                <div class="info-section-title">Treatment Recommendations</div>
-                <div class="custom-list">
-                    {''.join([f'• {treatment}<br>' for treatment in disease_info['treatment']])}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if 'when_to_seek_care' in disease_info:
-                st.markdown(f"""
-                <div class="info-section" style="border-left-color: #ef4444;">
-                    <div class="info-section-title" style="color: #dc2626;">⚠️ When to Seek Medical Care</div>
-                    <div class="custom-list">
-                        {''.join([f'• {item}<br>' for item in disease_info['when_to_seek_care']])}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-with tab3:
-    st.markdown('<div class="section-header">About ClaraVision Health</div>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="info-card">
-        <h3>🎯 Mission</h3>
-        <p>ClaraVision Health is dedicated to democratizing dermatological care across Africa by providing 
-        AI-powered skin condition analysis optimized for African skin tones and common conditions in the SADC region.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("""
-        <div class="info-card">
-            <h3>🔬 Technology</h3>
-            <ul class="custom-list">
-                <li>Advanced computer vision models</li>
-                <li>Optimized for Fitzpatrick IV-VI skin tones</li>
-                <li>Trained on diverse African datasets</li>
-                <li>Real-time inference via Roboflow</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="info-card">
-            <h3>🌍 Target Markets</h3>
-            <ul class="custom-list">
-                <li>SADC Region (Primary)</li>
-                <li>Sub-Saharan Africa</li>
-                <li>Resource-limited settings</li>
-                <li>Primary care facilities</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="info-card">
-        <h3>⚖️ Regulatory & Compliance</h3>
-        <p><strong>Current Status:</strong> Demonstration/Proof of Concept</p>
-        <p><strong>Planned Certifications:</strong></p>
-        <ul class="custom-list">
-            <li>MCAZ (Medicines Control Authority of Zimbabwe) Registration</li>
-            <li>ISO 13485 Medical Device Quality Management</li>
-            <li>CE Marking (via Estonia OÜ registration)</li>
-            <li>FDA 510(k) pathway consideration</li>
-        </ul>
-        <p><strong>Clinical Decision Support Classification:</strong> This tool is positioned as a Clinical Decision Support 
-        System (CDSS) to enable early revenue generation while full regulatory clearance is pursued.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="info-card">
-        <h3>📞 Contact Information</h3>
-        <p><strong>Developer:</strong> ClaraVision Health</p>
-        <p><strong>Location:</strong> Harare, Zimbabwe (SADC Region)</p>
-        <p><strong>Entity:</strong> Estonia OÜ (for EU grant access)</p>
-    </div>
-    """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="content-card">', unsafe_allow_html=True)
+        st.info("👈 Upload an image to begin analysis")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # Footer
 st.markdown("""
-<div class="footer">
-    <p>ClaraVision Health v1.0 | Developed in Zimbabwe for African Healthcare</p>
-    <p style="font-size: 0.8rem; margin-top: 0.5rem;">
-        This is a demonstration system. Not for clinical diagnosis without healthcare professional oversight.
+<div style="text-align: center; padding: 2rem; color: white; margin-top: 3rem;">
+    <p style="font-size: 0.9rem; opacity: 0.9;">
+        <strong>ClaraVision Health v1.0</strong> | Developed in Zimbabwe for African Healthcare
+    </p>
+    <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.5rem;">
+        Demo/POC • Not for clinical diagnosis without healthcare professional oversight
     </p>
 </div>
 """, unsafe_allow_html=True)
