@@ -6,7 +6,33 @@ from datetime import datetime
 import os
 from PIL import Image
 import io
-from disease_database import DISEASE_DATABASE, get_disease_info
+from disease_database import DISEASE_DATABASE
+try:
+    from disease_database import get_disease_info
+except ImportError:
+    # Fallback if helper function doesn't exist
+    def get_disease_info(class_name):
+        """Fallback disease matching function"""
+        if class_name in DISEASE_DATABASE:
+            return DISEASE_DATABASE[class_name]
+        
+        class_lower = class_name.lower()
+        if class_lower in DISEASE_DATABASE:
+            return DISEASE_DATABASE[class_lower]
+        
+        class_underscore = class_name.replace(' ', '_')
+        if class_underscore in DISEASE_DATABASE:
+            return DISEASE_DATABASE[class_underscore]
+        
+        class_no_underscore = class_name.replace('_', ' ')
+        if class_no_underscore in DISEASE_DATABASE:
+            return DISEASE_DATABASE[class_no_underscore]
+        
+        class_title = class_name.title()
+        if class_title in DISEASE_DATABASE:
+            return DISEASE_DATABASE[class_title]
+        
+        return None
 from utils import generate_pdf_report, send_email_report
 
 # Page configuration
